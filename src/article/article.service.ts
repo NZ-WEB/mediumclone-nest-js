@@ -15,7 +15,9 @@ export class ArticleService {
     private readonly articleRepository: Repository<ArticleEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
-  ) {}
+  ) {
+  }
+
   async findAll(
     curentUserId: number,
     query: any,
@@ -43,6 +45,22 @@ export class ArticleService {
       });
     }
 
+    if (query.favorites) {
+      const author = await this.userRepository.findOne(
+        {
+          username: query.favorites,
+        },
+        { relations: ['favorites'] },
+      );
+      const ids = author.favorites.map((el) => el.id);
+
+      if (ids.length > 0) {
+        queryBuilder.andWhere('articles.authorId IN (:...ids)', { ids }); // из всех articles выберет только те у которых author.id аходится в массиве тех постов, которые залайкал пользователь
+      } else {
+        queryBuilder.andWhere('1=0'); // чтобы код не падал при ids = 0 создается невозможное условие для queryBuilder
+      }
+    }
+
     if (query.limit) {
       queryBuilder.limit(query.limit);
     }
@@ -50,9 +68,21 @@ export class ArticleService {
     if (query.offset) {
       queryBuilder.offset(query.offset);
     }
-    const articles = await queryBuilder.getMany();
 
-    return { articles, articlesCount };
+    let favoriteIds: number[] = [];
+
+    if (curentUserId) {
+      const currentUser = await this.userRepository.findOne(curentUserId, { relations: ['favorites'] });
+      favoriteIds = currentUser.favorites.map((fav) => fav.id);
+    }
+
+    const articles = await queryBuilder.getMany();
+    const articlesWithFavorites = articles.map((article) => {
+      const favorited = favoriteIds.includes(article.id);
+      return { ...article, favorited };
+    });
+
+    return { articles: articlesWithFavorites, articlesCount };
   }
 
   async createArticle(
@@ -122,9 +152,10 @@ export class ArticleService {
       relations: ['favorites'],
     });
 
-    const isNotFavorited = user.favorites.findIndex(
-      (articleInFavorites) => articleInFavorites.id === article.id,
-    ) === -1;
+    const isNotFavorited =
+      user.favorites.findIndex(
+        (articleInFavorites) => articleInFavorites.id === article.id,
+      ) === -1;
 
     if (isNotFavorited) {
       user.favorites.push(article);
