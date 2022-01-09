@@ -15,8 +15,7 @@ export class ArticleService {
     private readonly articleRepository: Repository<ArticleEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
-  ) {
-  }
+  ) {}
 
   async findAll(
     curentUserId: number,
@@ -72,7 +71,9 @@ export class ArticleService {
     let favoriteIds: number[] = [];
 
     if (curentUserId) {
-      const currentUser = await this.userRepository.findOne(curentUserId, { relations: ['favorites'] });
+      const currentUser = await this.userRepository.findOne(curentUserId, {
+        relations: ['favorites'],
+      });
       favoriteIds = currentUser.favorites.map((fav) => fav.id);
     }
 

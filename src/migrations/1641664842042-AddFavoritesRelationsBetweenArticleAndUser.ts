@@ -1,7 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddFavoritesRelationsBetweenArticleAndUser1641664842042
-  implements MigrationInterface {
+  implements MigrationInterface
+{
   name = 'AddFavoritesRelationsBetweenArticleAndUser1641664842042';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
